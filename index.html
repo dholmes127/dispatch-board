@@ -236,9 +236,12 @@ async function loadFromKV() {
       const data = await res.json();
       if (data && Array.isArray(data)) {
         state = data;
-        setSyncStatus('synced', 'Live');
-        return;
+      } else {
+        state = defaultState();
       }
+      setSyncStatus('synced', 'Live');
+      document.getElementById('offline-banner').classList.remove('show');
+      return;
     }
   } catch(e) {}
   const local = localStorage.getItem('dispatch-' + boardId);
