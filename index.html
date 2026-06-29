@@ -33,10 +33,9 @@
     letter-spacing: -0.3px;
   }
 
-  .board-id {
+  .board-meta {
     font-size: 12px;
     color: #888;
-    font-family: 'SF Mono', 'Fira Code', monospace;
     margin-top: 2px;
   }
 
@@ -122,7 +121,6 @@
 
   .status-inner { display: flex; align-items: center; gap: 7px; }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-
   .chevron { font-size: 11px; opacity: 0.5; }
 
   .timestamp {
@@ -131,8 +129,6 @@
     text-align: right;
     white-space: nowrap;
   }
-
-
 
   .offline-banner {
     display: none;
@@ -146,9 +142,16 @@
   }
   .offline-banner.show { display: block; }
 
+  .no-id {
+    text-align: center;
+    padding: 48px 24px;
+    color: #aaa;
+    font-size: 14px;
+  }
+  .no-id strong { display: block; color: #555; font-size: 16px; margin-bottom: 8px; }
+
   @media (max-width: 480px) {
     .board-row { grid-template-columns: 70px 1fr 80px; gap: 8px; padding: 10px 12px; }
-    .footer { padding: 0.875rem 1rem; }
   }
 </style>
 </head>
@@ -161,8 +164,8 @@
 
   <div class="header">
     <div class="header-left">
-      <h1>Dispatch board</h1>
-      <div class="board-id" id="board-id-label"></div>
+      <h1 id="board-title">Dispatch board</h1>
+      <div class="board-meta" id="board-meta">Loading…</div>
     </div>
     <div class="header-right">
       <div class="sync-indicator">
@@ -175,10 +178,13 @@
 
   <div class="board" id="board"></div>
 
-
-
 </div>
+
 <script>
+const NOTION_WORKER = 'https://joalku-production-editer.dholmes127.workers.dev';
+const KV_URL = 'https://dispatch-board-api.dholmes127.workers.dev';
+const TRUCKS = 10;
+
 const STATUSES = [
   { label: 'Not started', color: '#aaa',    border: '#ddd',    bg: '#fafafa'  },
   { label: 'In route',    color: '#1a6fc4', border: '#85b7eb', bg: '#e6f1fb'  },
@@ -187,29 +193,8 @@ const STATUSES = [
   { label: 'Done',        color: '#3d6b10', border: '#97c459', bg: '#eaf3de'  },
 ];
 
-const TRUCKS = 10;
-
-function getBoardId() {
-  const params = new URLSearchParams(window.location.search);
-  const date = params.get('date');
-  const client = params.get('client');
-  if (date && client) return `${date}--${client}`;
-  if (date) return date;
-  const d = new Date();
-  return d.toISOString().slice(0,10);
-}
-
-function getBoardLabel() {
-  const params = new URLSearchParams(window.location.search);
-  const date = params.get('date');
-  const client = params.get('client');
-  if (date && client) return `${date} · ${client}`;
-  if (date) return date;
-  return new Date().toISOString().slice(0,10);
-}
-
-const boardId = getBoardId();
-const KV_URL = 'https://dispatch-board-api.dholmes127.workers.dev'; // replace after deploying worker
+const params = new URLSearchParams(window.location.search);
+const pageId = params.get('id');
 
 let state = [];
 let syncTimeout = null;
@@ -223,38 +208,68 @@ function defaultState() {
 }
 
 function setSyncStatus(status, label) {
-  const dot = document.getElementById('sync-dot');
-  const lbl = document.getElementById('sync-label');
-  dot.className = 'sync-dot ' + status;
-  lbl.textContent = label;
+  document.getElementById('sync-dot').className = 'sync-dot ' + status;
+  document.getElementById('sync-label').textContent = label;
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+}
+
+async function loadProductionDetails() {
+  if (!pageId) {
+    document.getElementById('board-meta').textContent = 'No production ID in URL';
+    return;
+  }
+  try {
+    const r = await fetch(`${NOTION_WORKER}/v1/pages/${pageId}`, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    const props = data.properties;
+    const name = props['Production Name']?.title?.[0]?.plain_text || 'Production';
+    const date = props['Date of Supply']?.date?.start || '';
+    const client = props['Client Name']?.rich_text?.[0]?.plain_text || '';
+    const location = props['Location']?.rich_text?.[0]?.plain_text || '';
+
+    document.getElementById('board-title').textContent = name;
+    const parts = [fmtDate(date), client, location].filter(Boolean);
+    document.getElementById('board-meta').textContent = parts.join(' · ');
+  } catch(e) {
+    document.getElementById('board-meta').textContent = pageId ? pageId.slice(0,8)+'…' : '—';
+  }
 }
 
 async function loadFromKV() {
+  if (!pageId) {
+    state = defaultState();
+    return;
+  }
   try {
-    const res = await fetch(`${KV_URL}?board=${encodeURIComponent(boardId)}`);
+    const res = await fetch(`${KV_URL}?board=${encodeURIComponent(pageId)}`);
     if (res.ok) {
       const data = await res.json();
-      if (data && Array.isArray(data)) {
-        state = data;
-      } else {
-        state = defaultState();
-      }
+      state = (data && Array.isArray(data)) ? data : defaultState();
       setSyncStatus('synced', 'Live');
       document.getElementById('offline-banner').classList.remove('show');
       return;
     }
   } catch(e) {}
-  const local = localStorage.getItem('dispatch-' + boardId);
+  const local = localStorage.getItem('dispatch-' + pageId);
   state = local ? JSON.parse(local) : defaultState();
   setSyncStatus('error', 'Offline');
   document.getElementById('offline-banner').classList.add('show');
 }
 
 async function saveToKV() {
-  localStorage.setItem('dispatch-' + boardId, JSON.stringify(state));
+  if (!pageId) return;
+  localStorage.setItem('dispatch-' + pageId, JSON.stringify(state));
   setSyncStatus('syncing', 'Saving…');
   try {
-    const res = await fetch(`${KV_URL}?board=${encodeURIComponent(boardId)}`, {
+    const res = await fetch(`${KV_URL}?board=${encodeURIComponent(pageId)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(state)
@@ -282,13 +297,15 @@ function formatTime(ts) {
 }
 
 function render() {
-  document.getElementById('board-id-label').textContent = getBoardLabel();
-
-
-
   const board = document.getElementById('board');
-  board.innerHTML = '';
 
+  if (!pageId) {
+    board.innerHTML = '<div class="no-id"><strong>No production selected</strong>Open this board from a production record in Notion</div>';
+    document.getElementById('board-meta').textContent = '';
+    return;
+  }
+
+  board.innerHTML = '';
   state.forEach((t, i) => {
     const s = STATUSES[t.statusIndex];
     const row = document.createElement('div');
@@ -325,20 +342,18 @@ function resetAll() {
   scheduleSave();
 }
 
-
-
+// Init
+loadProductionDetails();
 loadFromKV().then(render);
 
+// Poll for live updates every 10s
 setInterval(async () => {
+  if (!pageId) return;
   try {
-    const res = await fetch(`${KV_URL}?board=${encodeURIComponent(boardId)}`);
+    const res = await fetch(`${KV_URL}?board=${encodeURIComponent(pageId)}`);
     if (res.ok) {
       const data = await res.json();
-      if (data && Array.isArray(data)) {
-        state = data;
-        render();
-        setSyncStatus('synced', 'Live');
-      }
+      if (data && Array.isArray(data)) { state = data; render(); setSyncStatus('synced', 'Live'); }
     }
   } catch(e) {}
 }, 10000);
