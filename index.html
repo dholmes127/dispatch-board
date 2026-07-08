@@ -6,180 +6,49 @@
 <title>Dispatch Board</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #f5f4f0;
-    min-height: 100vh;
-    padding: 1.5rem 1rem;
-    color: #1a1a1a;
-  }
-
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; min-height: 100vh; padding: 1.5rem 1rem; color: #1a1a1a; }
   .container { max-width: 640px; margin: 0 auto; }
-
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .header-left h1 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #1a1a1a;
-    letter-spacing: -0.3px;
-  }
-
-  .board-meta {
-    font-size: 12px;
-    color: #888;
-    margin-top: 2px;
-  }
-
-  .header-right {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .btn-ghost {
-    font-size: 13px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    background: #fff;
-    cursor: pointer;
-    color: #555;
-    font-family: inherit;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
+  .header-left h1 { font-size: 18px; font-weight: 600; color: #1a1a1a; letter-spacing: -0.3px; }
+  .board-meta { font-size: 12px; color: #888; margin-top: 2px; }
+  .header-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn-ghost { font-size: 13px; padding: 6px 12px; border-radius: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; color: #555; font-family: inherit; display: flex; align-items: center; gap: 5px; }
   .btn-ghost:hover { background: #f0efeb; }
   .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  .sync-indicator {
-    font-size: 12px;
-    color: #aaa;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .sync-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: #ccc;
-  }
+  .btn-complete { font-size: 13px; padding: 6px 14px; border-radius: 8px; border: none; background: #3d6b10; color: #fff; cursor: pointer; font-family: inherit; font-weight: 600; }
+  .btn-complete:hover { background: #2e520c; }
+  .btn-complete:disabled { opacity: 0.4; cursor: not-allowed; }
+  .sync-indicator { font-size: 12px; color: #aaa; display: flex; align-items: center; gap: 5px; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #ccc; }
   .sync-dot.syncing { background: #f0a500; animation: pulse 1s infinite; }
   .sync-dot.synced { background: #22a06b; }
   .sync-dot.error { background: #e53e3e; }
-
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  .board {
-    background: #fff;
-    border-radius: 14px;
-    border: 1px solid #e8e6e0;
-    overflow: hidden;
-  }
-
-  .board-row {
-    display: grid;
-    grid-template-columns: 90px 1fr 100px;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-bottom: 1px solid #f0eeea;
-  }
+  .board { background: #fff; border-radius: 14px; border: 1px solid #e8e6e0; overflow: hidden; }
+  .board-row { display: grid; grid-template-columns: 90px 1fr 100px; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #f0eeea; }
   .board-row:last-child { border-bottom: none; }
-
-  .truck-num {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1a1a1a;
-  }
-
-  .status-btn {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 9px 12px;
-    border-radius: 8px;
-    border: 1.5px solid;
-    background: transparent;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    transition: transform 0.1s, opacity 0.1s;
-    width: 100%;
-    text-align: left;
-  }
+  .truck-num { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+  .status-btn { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 8px; border: 1.5px solid; background: transparent; font-family: inherit; font-size: 13px; font-weight: 500; transition: transform 0.1s, opacity 0.1s; width: 100%; text-align: left; }
   .status-btn.clickable { cursor: pointer; }
   .status-btn.clickable:active { transform: scale(0.97); }
   .status-btn.readonly { cursor: default; opacity: 0.85; }
-
   .status-inner { display: flex; align-items: center; gap: 7px; }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .chevron { font-size: 11px; opacity: 0.5; }
-
-  .timestamp {
-    font-size: 11px;
-    color: #aaa;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  .readonly-notice {
-    display: none;
-    background: #f9f8f6;
-    border: 1px solid #e8e6e0;
-    border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 13px;
-    color: #aaa;
-    margin-bottom: 1rem;
-    text-align: center;
-  }
-  .readonly-notice.show { display: block; }
-
-  .offline-banner {
-    display: none;
-    background: #fff8e1;
-    border: 1px solid #f0c040;
-    border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 13px;
-    color: #7a5c00;
-    margin-bottom: 1rem;
-  }
-  .offline-banner.show { display: block; }
-
-  .no-id {
-    text-align: center;
-    padding: 48px 24px;
-    color: #aaa;
-    font-size: 14px;
-  }
+  .timestamp { font-size: 11px; color: #aaa; text-align: right; white-space: nowrap; }
+  .notice { display: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; margin-bottom: 1rem; }
+  .notice.show { display: block; }
+  .notice.readonly { background: #f9f8f6; border: 1px solid #e8e6e0; color: #aaa; text-align: center; }
+  .notice.offline { background: #fff8e1; border: 1px solid #f0c040; color: #7a5c00; }
+  .no-id { text-align: center; padding: 48px 24px; color: #aaa; font-size: 14px; }
   .no-id strong { display: block; color: #555; font-size: 16px; margin-bottom: 8px; }
-
-  @media (max-width: 480px) {
-    .board-row { grid-template-columns: 70px 1fr 80px; gap: 8px; padding: 10px 12px; }
-  }
+  @media (max-width: 480px) { .board-row { grid-template-columns: 70px 1fr 80px; gap: 8px; padding: 10px 12px; } }
 </style>
 </head>
 <body>
 <div class="container">
-
-  <div class="offline-banner" id="offline-banner">
-    ⚠️ Working offline — changes saved locally and will sync when reconnected.
-  </div>
-
-  <div class="readonly-notice" id="readonly-notice">
-    👁 View only — you don't have permission to update truck statuses.
-  </div>
+  <div class="notice readonly" id="readonly-notice">👁 View only — you don't have permission to update truck statuses.</div>
+  <div class="notice offline" id="offline-banner">⚠️ Working offline — changes saved locally and will sync when reconnected.</div>
 
   <div class="header">
     <div class="header-left">
@@ -192,11 +61,11 @@
         <span id="sync-label">—</span>
       </div>
       <button class="btn-ghost" id="resetBtn" onclick="resetAll()">↺ Reset</button>
+      <button class="btn-complete" id="completeBtn" onclick="markComplete()" style="display:none;">✓ Mark Complete</button>
     </div>
   </div>
 
   <div class="board" id="board"></div>
-
 </div>
 
 <script>
@@ -204,20 +73,23 @@ const NOTION_WORKER = 'https://joalku-production-editer.dholmes127.workers.dev';
 const KV_URL = 'https://dispatch-board-api.dholmes127.workers.dev';
 const TRUCKS = 10;
 
-// Users allowed to click dispatch buttons
 const DISPATCH_ADMIN_USERS = ['daniel_amegah'];
-// Add 3 more when their accounts are created:
-// 'username2', 'username3', 'username4'
+// add 3 more when accounts are created
 
 const params = new URLSearchParams(window.location.search);
 const pageId = params.get('id');
 const loginFromUrl = (params.get('login') || '').toLowerCase();
 const canDispatch = DISPATCH_ADMIN_USERS.includes(loginFromUrl);
 
-// Show readonly notice and disable reset for non-admins
+let numberOfTrucks = TRUCKS; // will be updated from Notion
+let productionStatus = 'Scheduled';
+
 if (!canDispatch) {
   document.getElementById('readonly-notice').classList.add('show');
   document.getElementById('resetBtn').disabled = true;
+}
+if (canDispatch) {
+  document.getElementById('completeBtn').style.display = 'block';
 }
 
 const STATUSES = [
@@ -232,11 +104,7 @@ let state = [];
 let syncTimeout = null;
 
 function defaultState() {
-  return Array.from({length: TRUCKS}, (_, i) => ({
-    truck: i + 1,
-    statusIndex: 0,
-    updatedAt: null
-  }));
+  return Array.from({length: TRUCKS}, (_, i) => ({ truck: i + 1, statusIndex: 0, updatedAt: null }));
 }
 
 function setSyncStatus(status, label) {
@@ -246,28 +114,28 @@ function setSyncStatus(status, label) {
 
 function fmtDate(d) {
   if (!d) return '';
-  const dt = new Date(d + 'T00:00:00');
-  return dt.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
 }
 
 async function loadProductionDetails() {
-  if (!pageId) {
-    document.getElementById('board-meta').textContent = 'No production ID in URL';
-    return;
-  }
+  if (!pageId) { document.getElementById('board-meta').textContent = 'No production ID in URL'; return; }
   try {
-    const r = await fetch(`${NOTION_WORKER}/v1/pages/${pageId}`, {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    const r = await fetch(`${NOTION_WORKER}/v1/pages/${pageId}`, { headers: { 'Content-Type': 'application/json' } });
     if (!r.ok) throw new Error();
     const data = await r.json();
     const props = data.properties;
-    const name = props['Production Name']?.title?.[0]?.plain_text || 'Production';
-    const date = props['Date of Supply']?.date?.start || '';
-    const client = props['Client Name']?.rich_text?.[0]?.plain_text || '';
+    const name     = props['Production Name']?.title?.[0]?.plain_text || 'Production';
+    const date     = props['Date of Supply']?.date?.start || '';
+    const client   = props['Client Name']?.rich_text?.[0]?.plain_text || '';
     const location = props['Location']?.rich_text?.[0]?.plain_text || '';
+    const project  = props['Project Name']?.rich_text?.[0]?.plain_text || '';
 
-    document.getElementById('board-title').textContent = name;
+    // Store truck count and status for auto-update logic
+    numberOfTrucks = props['Number of Trucks']?.number || TRUCKS;
+    productionStatus = props['Status']?.select?.name || 'Scheduled';
+
+    const displayName = project || client || name;
+    document.getElementById('board-title').textContent = displayName;
     const parts = [fmtDate(date), client, location].filter(Boolean);
     document.getElementById('board-meta').textContent = parts.join(' · ');
   } catch(e) {
@@ -276,10 +144,7 @@ async function loadProductionDetails() {
 }
 
 async function loadFromKV() {
-  if (!pageId) {
-    state = defaultState();
-    return;
-  }
+  if (!pageId) { state = defaultState(); return; }
   try {
     const res = await fetch(`${KV_URL}?board=${encodeURIComponent(pageId)}`);
     if (res.ok) {
@@ -302,25 +167,60 @@ async function saveToKV() {
   setSyncStatus('syncing', 'Saving…');
   try {
     const res = await fetch(`${KV_URL}?board=${encodeURIComponent(pageId)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state)
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state)
     });
-    if (res.ok) {
-      setSyncStatus('synced', 'Saved');
-      document.getElementById('offline-banner').classList.remove('show');
-    } else {
-      setSyncStatus('error', 'Offline');
-    }
-  } catch(e) {
-    setSyncStatus('error', 'Offline');
-    document.getElementById('offline-banner').classList.add('show');
-  }
+    if (res.ok) { setSyncStatus('synced', 'Saved'); document.getElementById('offline-banner').classList.remove('show'); }
+    else { setSyncStatus('error', 'Offline'); }
+  } catch(e) { setSyncStatus('error', 'Offline'); document.getElementById('offline-banner').classList.add('show'); }
 }
 
 function scheduleSave() {
   clearTimeout(syncTimeout);
   syncTimeout = setTimeout(saveToKV, 600);
+}
+
+// Auto-status logic: update production status in Notion based on truck states
+async function checkAndUpdateProductionStatus() {
+  if (!pageId || !canDispatch) return;
+
+  const activeTrucks = state.slice(0, numberOfTrucks);
+  const anyInRoute = activeTrucks.some(t => STATUSES[t.statusIndex].label === 'In route');
+  const anyActive  = activeTrucks.some(t => t.statusIndex > 0);
+  const allDone    = activeTrucks.every(t => STATUSES[t.statusIndex].label === 'Done');
+
+  let newStatus = null;
+  if (allDone && productionStatus !== 'Completed') {
+    newStatus = 'Completed';
+  } else if ((anyInRoute || anyActive) && productionStatus === 'Scheduled') {
+    newStatus = 'In Progress';
+  }
+
+  if (newStatus) {
+    try {
+      await fetch(`${NOTION_WORKER}/v1/pages/${pageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: { 'Status': { select: { name: newStatus } } } })
+      });
+      productionStatus = newStatus;
+    } catch(e) {}
+  }
+}
+
+async function markComplete() {
+  if (!canDispatch || !pageId) return;
+  if (!confirm('Mark this production as Completed?')) return;
+  try {
+    await fetch(`${NOTION_WORKER}/v1/pages/${pageId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ properties: { 'Status': { select: { name: 'Completed' } } } })
+    });
+    productionStatus = 'Completed';
+    document.getElementById('sync-label').textContent = 'Completed ✓';
+  } catch(e) {
+    alert('Could not update status');
+  }
 }
 
 function formatTime(ts) {
@@ -330,33 +230,33 @@ function formatTime(ts) {
 
 function render() {
   const board = document.getElementById('board');
-
   if (!pageId) {
-    board.innerHTML = '<div class="no-id"><strong>No production selected</strong>Open this board from a production record in Notion</div>';
+    board.innerHTML = '<div class="no-id"><strong>No production selected</strong>Open this board from a production record</div>';
     document.getElementById('board-meta').textContent = '';
     return;
   }
-
   board.innerHTML = '';
   state.forEach((t, i) => {
     const s = STATUSES[t.statusIndex];
+    const isActive = i < numberOfTrucks; // only show trucks up to numberOfTrucks
     const row = document.createElement('div');
     row.className = 'board-row';
+    if (!isActive) row.style.opacity = '0.3'; // dim unused trucks
 
-    const btnClass = canDispatch ? 'status-btn clickable' : 'status-btn readonly';
-    const onclick = canDispatch ? `onclick="cycleStatus(${i})"` : '';
+    const btnClass = (canDispatch && isActive) ? 'status-btn clickable' : 'status-btn readonly';
+    const onclick  = (canDispatch && isActive) ? `onclick="cycleStatus(${i})"` : '';
 
     row.innerHTML = `
       <div class="truck-num">Truck ${t.truck}</div>
       <button class="${btnClass}"
         style="color:${s.color}; border-color:${s.border}; background:${s.bg};"
         ${onclick}
-        aria-label="Truck ${t.truck} status: ${s.label}${canDispatch ? '. Tap to change.' : ' (view only).'}">
+        aria-label="Truck ${t.truck}: ${s.label}">
         <span class="status-inner">
           <span class="status-dot" style="background:${s.color};"></span>
           ${s.label}
         </span>
-        ${canDispatch ? '<span class="chevron">›</span>' : ''}
+        ${(canDispatch && isActive) ? '<span class="chevron">›</span>' : ''}
       </button>
       <div class="timestamp">${formatTime(t.updatedAt)}</div>
     `;
@@ -364,12 +264,13 @@ function render() {
   });
 }
 
-function cycleStatus(i) {
+async function cycleStatus(i) {
   if (!canDispatch) return;
   state[i].statusIndex = (state[i].statusIndex + 1) % STATUSES.length;
   state[i].updatedAt = Date.now();
   render();
   scheduleSave();
+  await checkAndUpdateProductionStatus();
 }
 
 function resetAll() {
@@ -381,8 +282,7 @@ function resetAll() {
 }
 
 // Init
-loadProductionDetails();
-loadFromKV().then(render);
+loadProductionDetails().then(() => loadFromKV().then(render));
 
 // Poll for live updates every 10s
 setInterval(async () => {
