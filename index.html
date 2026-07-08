@@ -59,6 +59,7 @@
     gap: 5px;
   }
   .btn-ghost:hover { background: #f0efeb; }
+  .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .sync-indicator {
     font-size: 12px;
@@ -109,7 +110,6 @@
     border-radius: 8px;
     border: 1.5px solid;
     background: transparent;
-    cursor: pointer;
     font-family: inherit;
     font-size: 13px;
     font-weight: 500;
@@ -117,7 +117,9 @@
     width: 100%;
     text-align: left;
   }
-  .status-btn:active { transform: scale(0.97); }
+  .status-btn.clickable { cursor: pointer; }
+  .status-btn.clickable:active { transform: scale(0.97); }
+  .status-btn.readonly { cursor: default; opacity: 0.85; }
 
   .status-inner { display: flex; align-items: center; gap: 7px; }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
@@ -129,6 +131,19 @@
     text-align: right;
     white-space: nowrap;
   }
+
+  .readonly-notice {
+    display: none;
+    background: #f9f8f6;
+    border: 1px solid #e8e6e0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  .readonly-notice.show { display: block; }
 
   .offline-banner {
     display: none;
@@ -162,6 +177,10 @@
     ⚠️ Working offline — changes saved locally and will sync when reconnected.
   </div>
 
+  <div class="readonly-notice" id="readonly-notice">
+    👁 View only — you don't have permission to update truck statuses.
+  </div>
+
   <div class="header">
     <div class="header-left">
       <h1 id="board-title">Dispatch board</h1>
@@ -172,7 +191,7 @@
         <div class="sync-dot" id="sync-dot"></div>
         <span id="sync-label">—</span>
       </div>
-      <button class="btn-ghost" onclick="resetAll()">↺ Reset</button>
+      <button class="btn-ghost" id="resetBtn" onclick="resetAll()">↺ Reset</button>
     </div>
   </div>
 
@@ -185,6 +204,22 @@ const NOTION_WORKER = 'https://joalku-production-editer.dholmes127.workers.dev';
 const KV_URL = 'https://dispatch-board-api.dholmes127.workers.dev';
 const TRUCKS = 10;
 
+// Users allowed to click dispatch buttons
+const DISPATCH_ADMIN_USERS = ['daniel_amegah'];
+// Add 3 more when their accounts are created:
+// 'username2', 'username3', 'username4'
+
+const params = new URLSearchParams(window.location.search);
+const pageId = params.get('id');
+const loginFromUrl = (params.get('login') || '').toLowerCase();
+const canDispatch = DISPATCH_ADMIN_USERS.includes(loginFromUrl);
+
+// Show readonly notice and disable reset for non-admins
+if (!canDispatch) {
+  document.getElementById('readonly-notice').classList.add('show');
+  document.getElementById('resetBtn').disabled = true;
+}
+
 const STATUSES = [
   { label: 'Not started', color: '#aaa',    border: '#ddd',    bg: '#fafafa'  },
   { label: 'In route',    color: '#1a6fc4', border: '#85b7eb', bg: '#e6f1fb'  },
@@ -192,9 +227,6 @@ const STATUSES = [
   { label: 'Dispatched',  color: '#0f7a5a', border: '#5dcaa5', bg: '#e1f5ee'  },
   { label: 'Done',        color: '#3d6b10', border: '#97c459', bg: '#eaf3de'  },
 ];
-
-const params = new URLSearchParams(window.location.search);
-const pageId = params.get('id');
 
 let state = [];
 let syncTimeout = null;
@@ -310,17 +342,21 @@ function render() {
     const s = STATUSES[t.statusIndex];
     const row = document.createElement('div');
     row.className = 'board-row';
+
+    const btnClass = canDispatch ? 'status-btn clickable' : 'status-btn readonly';
+    const onclick = canDispatch ? `onclick="cycleStatus(${i})"` : '';
+
     row.innerHTML = `
       <div class="truck-num">Truck ${t.truck}</div>
-      <button class="status-btn"
+      <button class="${btnClass}"
         style="color:${s.color}; border-color:${s.border}; background:${s.bg};"
-        onclick="cycleStatus(${i})"
-        aria-label="Truck ${t.truck} status: ${s.label}. Tap to change.">
+        ${onclick}
+        aria-label="Truck ${t.truck} status: ${s.label}${canDispatch ? '. Tap to change.' : ' (view only).'}">
         <span class="status-inner">
           <span class="status-dot" style="background:${s.color};"></span>
           ${s.label}
         </span>
-        <span class="chevron">›</span>
+        ${canDispatch ? '<span class="chevron">›</span>' : ''}
       </button>
       <div class="timestamp">${formatTime(t.updatedAt)}</div>
     `;
@@ -329,6 +365,7 @@ function render() {
 }
 
 function cycleStatus(i) {
+  if (!canDispatch) return;
   state[i].statusIndex = (state[i].statusIndex + 1) % STATUSES.length;
   state[i].updatedAt = Date.now();
   render();
@@ -336,6 +373,7 @@ function cycleStatus(i) {
 }
 
 function resetAll() {
+  if (!canDispatch) return;
   if (!confirm('Reset all trucks to "Not started"?')) return;
   state = defaultState();
   render();
