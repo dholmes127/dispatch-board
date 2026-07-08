@@ -209,23 +209,49 @@ async function checkAndUpdateProductionStatus() {
 
 async function markComplete() {
   if (!canDispatch || !pageId) return;
-  if (!confirm('Mark this production as Completed?')) return;
-  try {
-    await fetch(`${NOTION_WORKER}/v1/pages/${pageId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ properties: { 'Status': { select: { name: 'Completed' } } } })
-    });
-    productionStatus = 'Completed';
-    document.getElementById('sync-label').textContent = 'Completed ✓';
-  } catch(e) {
-    alert('Could not update status');
+  const btn = document.getElementById('completeBtn');
+  if (btn.dataset.confirming === 'true') {
+    btn.dataset.confirming = 'false';
+    btn.textContent = '✓ Mark Complete';
+    btn.style.background = '#3d6b10';
+    try {
+      await fetch(`${NOTION_WORKER}/v1/pages/${pageId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ properties: { 'Status': { select: { name: 'Completed' } } } })
+      });
+      productionStatus = 'Completed';
+      document.getElementById('sync-label').textContent = 'Completed ✓';
+      updateCompleteButton();
+    } catch(e) {
+      alert('Could not update status');
+    }
+    return;
   }
+  // First click — ask for confirmation inline
+  btn.dataset.confirming = 'true';
+  btn.textContent = 'Tap again to confirm';
+  btn.style.background = '#c45f08';
+  setTimeout(() => {
+    if (btn.dataset.confirming === 'true') {
+      btn.dataset.confirming = 'false';
+      btn.textContent = '✓ Mark Complete';
+      btn.style.background = '#3d6b10';
+    }
+  }, 3000);
 }
 
 function formatTime(ts) {
   if (!ts) return '';
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function updateCompleteButton() {
+  const btn = document.getElementById('completeBtn');
+  if (!canDispatch || !btn) return;
+  const activeTrucks = state.slice(0, numberOfTrucks);
+  const allDone = activeTrucks.every(t => STATUSES[t.statusIndex].label === 'Done');
+  btn.style.display = (allDone || productionStatus === 'Completed') ? 'none' : 'block';
 }
 
 function render() {
@@ -262,6 +288,7 @@ function render() {
     `;
     board.appendChild(row);
   });
+  updateCompleteButton();
 }
 
 async function cycleStatus(i) {
@@ -297,4 +324,5 @@ setInterval(async () => {
 }, 10000);
 </script>
 </body>
+</html>
 </html>
