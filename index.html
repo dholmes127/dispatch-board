@@ -25,7 +25,7 @@
   .sync-dot.error { background: #e53e3e; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .board { background: #fff; border-radius: 14px; border: 1px solid #e8e6e0; overflow: hidden; }
-  .board-row { display: grid; grid-template-columns: 90px 1fr 100px; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #f0eeea; }
+  .board-row { display: grid; grid-template-columns: 90px 1fr 130px; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #f0eeea; }
   .board-row:last-child { border-bottom: none; }
   .truck-num { font-size: 14px; font-weight: 600; color: #1a1a1a; }
   .status-btn { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 8px; border: 1.5px solid; background: transparent; font-family: inherit; font-size: 13px; font-weight: 500; transition: transform 0.1s, opacity 0.1s; width: 100%; text-align: left; }
@@ -35,7 +35,9 @@
   .status-inner { display: flex; align-items: center; gap: 7px; }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .chevron { font-size: 11px; opacity: 0.5; }
-  .timestamp { font-size: 11px; color: #aaa; text-align: right; white-space: nowrap; }
+  .timestamp { font-size: 11px; color: #aaa; text-align: right; white-space: nowrap; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .avatar { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; color: #fff; }
+  .ts-row { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
   .notice { display: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; margin-bottom: 1rem; }
   .notice.show { display: block; }
   .notice.readonly { background: #f9f8f6; border: 1px solid #e8e6e0; color: #aaa; text-align: center; }
@@ -73,7 +75,14 @@ const NOTION_WORKER = 'https://joalku-production-editer.dholmes127.workers.dev';
 const KV_URL = 'https://dispatch-board-api.dholmes127.workers.dev';
 const TRUCKS = 10;
 
-const DISPATCH_ADMIN_USERS = ['daniel_amegah','isaac_aidoo', 'jude_agyeman_badu'];
+const DISPATCH_ADMIN_USERS = ['daniel_amegah', 'isaac_aidoo', 'jude_agyeman_badu'];
+
+// Login → { initials, color }
+const USER_AVATARS = {
+  'daniel_amegah':    { initials: 'DA', color: '#e8740c' },
+  'isaac_aidoo':      { initials: 'IA', color: '#1a6fc4' },
+  'jude_agyeman_badu':{ initials: 'JB', color: '#0f7a5a' },
+};
 // add 3 more when accounts are created
 
 const params = new URLSearchParams(window.location.search);
@@ -96,7 +105,7 @@ const STATUSES = [
   { label: 'Not started', color: '#aaa',    border: '#ddd',    bg: '#fafafa'  },
   { label: 'In route',    color: '#1a6fc4', border: '#85b7eb', bg: '#e6f1fb'  },
   { label: 'On site',     color: '#a05c00', border: '#ef9f27', bg: '#faeeda'  },
-  { label: 'Discharging',  color: '#0f7a5a', border: '#5dcaa5', bg: '#e1f5ee'  },
+  { label: 'Dispatched',  color: '#0f7a5a', border: '#5dcaa5', bg: '#e1f5ee'  },
   { label: 'Done',        color: '#3d6b10', border: '#97c459', bg: '#eaf3de'  },
 ];
 
@@ -104,7 +113,7 @@ let state = [];
 let syncTimeout = null;
 
 function defaultState() {
-  return Array.from({length: TRUCKS}, (_, i) => ({ truck: i + 1, statusIndex: 0, updatedAt: null }));
+  return Array.from({length: TRUCKS}, (_, i) => ({ truck: i + 1, statusIndex: 0, updatedAt: null, updatedBy: null }));
 }
 
 function setSyncStatus(status, label) {
@@ -272,6 +281,10 @@ function render() {
     const btnClass = (canDispatch && isActive) ? 'status-btn clickable' : 'status-btn readonly';
     const onclick  = (canDispatch && isActive) ? `onclick="cycleStatus(${i})"` : '';
 
+    const avatar = t.updatedBy && USER_AVATARS[t.updatedBy]
+      ? `<span class="avatar" style="background:${USER_AVATARS[t.updatedBy].color}">${USER_AVATARS[t.updatedBy].initials}</span>`
+      : '';
+
     row.innerHTML = `
       <div class="truck-num">Truck ${t.truck}</div>
       <button class="${btnClass}"
@@ -284,7 +297,9 @@ function render() {
         </span>
         ${(canDispatch && isActive) ? '<span class="chevron">›</span>' : ''}
       </button>
-      <div class="timestamp">${formatTime(t.updatedAt)}</div>
+      <div class="timestamp">
+        ${t.updatedAt ? `<div class="ts-row">${avatar}<span>${formatTime(t.updatedAt)}</span></div>` : ''}
+      </div>
     `;
     board.appendChild(row);
   });
@@ -295,17 +310,43 @@ async function cycleStatus(i) {
   if (!canDispatch) return;
   state[i].statusIndex = (state[i].statusIndex + 1) % STATUSES.length;
   state[i].updatedAt = Date.now();
+  state[i].updatedBy = loginFromUrl || null;
   render();
   scheduleSave();
   await checkAndUpdateProductionStatus();
 }
 
-function resetAll() {
+async function resetAll() {
   if (!canDispatch) return;
-  if (!confirm('Reset all trucks to "Not started"?')) return;
-  state = defaultState();
-  render();
-  scheduleSave();
+  const btn = document.getElementById('resetBtn');
+  if (btn.dataset.confirming === 'true') {
+    btn.dataset.confirming = 'false';
+    btn.textContent = '↺ Reset';
+    state = defaultState();
+    render();
+    scheduleSave();
+    // Reset Notion status back to Scheduled
+    if (pageId) {
+      try {
+        await fetch(`${NOTION_WORKER}/v1/pages/${pageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ properties: { 'Status': { select: { name: 'Scheduled' } } } })
+        });
+        productionStatus = 'Scheduled';
+        updateCompleteButton();
+      } catch(e) {}
+    }
+    return;
+  }
+  btn.dataset.confirming = 'true';
+  btn.textContent = 'Tap again to confirm';
+  setTimeout(() => {
+    if (btn.dataset.confirming === 'true') {
+      btn.dataset.confirming = 'false';
+      btn.textContent = '↺ Reset';
+    }
+  }, 3000);
 }
 
 // Init
@@ -324,5 +365,4 @@ setInterval(async () => {
 }, 10000);
 </script>
 </body>
-</html>
 </html>
